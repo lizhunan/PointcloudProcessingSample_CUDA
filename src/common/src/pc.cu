@@ -4,18 +4,21 @@ namespace pc {
 
 Pointcloud::Pointcloud()
 {
-
+    logger = std::make_unique<logger::Logger>(logger::Level::DEBUG);
 }
 
 bool Pointcloud::read_pcd_bin(const std::string& filename, std::vector<PointXYZIL>& points, PCDInfo& info)
 {
     std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "无法打开文件: " << filename << std::endl;
+    if (!file.is_open())
+    {
+        LOGE("Loading pcd binary file, %s is not founded!", filename.c_str());
         return false;
     }
 
-    if (!parse_pcd_header(file, info)) {
+    if (!parse_pcd_header(file, info))
+    {
+        LOGE("Loading pcd binary file, file header parsing error!");
         return false;
     }
 
