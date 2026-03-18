@@ -1,0 +1,26 @@
+#ifndef _DISPLAY_H
+#define _DISPLAY_H
+
+#include <Eigen/Dense>
+#include <chrono>
+#include <mutex>
+#include <string>
+#include <thread>
+
+namespace display {
+
+class Display {
+
+public:
+    Display(int point_num, std::string vehicle_type, int ratio);
+    ~Display();
+
+public:
+    void set_pointcloud();
+    void set_normal_vector();
+
+};
+
+}
+
+#endif
