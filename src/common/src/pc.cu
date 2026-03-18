@@ -4,7 +4,7 @@ namespace pc {
 
 Pointcloud::Pointcloud()
 {
-    logger = std::make_unique<logger::Logger>(logger::Level::DEBUG);
+    
 }
 
 bool Pointcloud::read_pcd_bin(const std::string& filename, std::vector<PointXYZIL>& points, PCDInfo& info)
