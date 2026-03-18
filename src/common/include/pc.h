@@ -1,11 +1,12 @@
-#ifndef _PC_H
-#define _PC_H
+#ifndef __PC_H__
+#define __PC_H__
 
 #include <iostream>
 #include <string>
 #include <sstream> 
 #include <fstream>
 #include <vector>
+#include "logger.h"
 
 namespace pc {
 
@@ -42,6 +43,9 @@ public:
 
 private:
     bool parse_pcd_header(std::ifstream& file, PCDInfo& info);
+
+private:
+    std::shared_ptr<logger::Logger> logger;
 
 };
 

@@ -10,6 +10,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 cuda_add_library(${MODULE_NAME} STATIC 
     src/pc.cu
     src/timer.cpp
+    src/logger.cpp
 )
 
 include_directories(
