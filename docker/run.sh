@@ -121,6 +121,8 @@ run_interactive() {
         --gpus all \
         --name ${CONTAINER_NAME} \
         --hostname ${CONTAINER_NAME} \
+        --net=host \
+        --privileged=true \
         -p ${VNC_PORT}:5900 \
         -p ${JUPYTER_PORT}:8888 \
         -p ${SSH_PORT}:22 \
@@ -146,6 +148,8 @@ run_daemon() {
         --gpus all \
         --name ${CONTAINER_NAME} \
         --hostname ${CONTAINER_NAME} \
+        --net=host \
+        --privileged=true \
         -p ${VNC_PORT}:5900 \
         -p ${JUPYTER_PORT}:8888 \
         -p ${SSH_PORT}:22 \

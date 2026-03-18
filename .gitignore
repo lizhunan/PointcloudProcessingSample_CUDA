@@ -6,3 +6,5 @@
 *.fatbin
 docker/build_info*
 build/
+data/
+.vscode/
