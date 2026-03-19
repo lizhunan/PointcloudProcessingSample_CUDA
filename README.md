@@ -156,7 +156,7 @@ export JUPYTER_PORT=8889
 
 The following dataset formats are currently supported: ModelNet40 (OFF format) and PCD (Point Cloud Data) files.
 
-### ModelNet40
+#### ModelNet40
 
 The dataset used is [ModelNet40](http://modelnet.cs.princeton.edu/), a widely used benchmark dataset for 3D shape classification and segmentation.
 
@@ -215,7 +215,7 @@ python script/vis.py --off /workspace/data/ModelNet40/chair/train/chair_0001.off
 | `--off` | `-o` | `/workspace/data/ModelNet40/airplane/train/airplane_0001.off` | Path to the OFF mesh file for visualization |
 | `--txt` | `-x` | `/workspace/data/ModelNet40_txt/airplane/train/airplane_0001.txt` | Path to the TXT pointcloud file for visualization |
 
-2. PCD
+#### PCD
 
 NO IMPLEMENT
 
@@ -231,9 +231,37 @@ NO IMPLEMENT
 
 ## 📚 Documentation
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🔧 Troubleshooting
 
-📧 Contact
+**Common Issues**
+
+1. error: XDG_RUNTIME_DIR not set in the environment.
+
+```bash
+export XDG_RUNTIME_DIR=/tmp/runtime-$USER
+```
+
+2. libEGL warning: egl: failed to create dri2 screen & libEGL warning: DRI2: failed to authenticate
+
+```bash
+# Force the use of GLX instead of EGL
+export PANGO_USE_EGL=0
+export PANGO_USE_GLX=1
+
+# If the above does not work, try forcing software rendering (alternative)
+export LIBGL_ALWAYS_SOFTWARE=1
+export GALLIUM_DRIVER=llvmpipe
+```
+
+**Network Issues (China)**
+
+1. If you're in China and experiencing Docker pull timeouts, you can use the image source in China, like [aityp](docker.aityp.com).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📧 Contact
 
 For questions or suggestions:
 

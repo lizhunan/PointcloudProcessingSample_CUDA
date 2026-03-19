@@ -127,6 +127,8 @@ run_interactive() {
         -p ${JUPYTER_PORT}:8888 \
         -p ${SSH_PORT}:22 \
         -v ${WORKSPACE_DIR}:/workspace \
+        -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+        -e DISPLAY=unix$DISPLAY \
         ${X11_VOLUME} \
         ${X11_ENV} \
         -e NVIDIA_VISIBLE_DEVICES=all \

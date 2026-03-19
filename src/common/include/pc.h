@@ -7,7 +7,8 @@
 #include <fstream>
 #include <vector>
 #include "logger.h"
-#include "common/include/cuda_base.h"
+#include "cuda_base.h"
+#include "/workspace/src/display/include/display.h"
 
 namespace pc {
 
@@ -34,6 +35,7 @@ class Pointcloud {
 
 public:
     Pointcloud();
+    Pointcloud(bool vis);
     ~Pointcloud();
 
 public:
@@ -48,12 +50,13 @@ private:
     bool parse_pcd_header(std::ifstream& file, PCDInfo& info);
 
 private:
-    const int POINTCLOUD_SIZE = 100000;
+    bool vis;
 
     float* d_points;
 
 private:
     std::shared_ptr<logger::Logger> logger;
+    std::shared_ptr<display::Display> display;
 
 };
 
