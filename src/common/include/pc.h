@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include "logger.h"
+#include "common/include/cuda_base.h"
 
 namespace pc {
 
@@ -39,10 +40,17 @@ public:
     bool read_pcd_ascii();
     bool read_pcd_bin(const std::string& filename, std::vector<PointXYZIL>& points,PCDInfo& info);
     bool read_bin();
-    bool read_txt();
+    bool read_txt_xyz(const std::string& filename);
 
+    void to_device(const float* points, const int point_num, float* d_points);
+    void to_host();
 private:
     bool parse_pcd_header(std::ifstream& file, PCDInfo& info);
+
+private:
+    const int POINTCLOUD_SIZE = 100000;
+
+    float* d_points;
 
 private:
     std::shared_ptr<logger::Logger> logger;

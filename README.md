@@ -5,6 +5,24 @@ A repository for CUDA-based pointcloud processing algorithms.
 
 This repository provides a collection of CUDA-accelerated pointcloud processing algorithms with practical examples. All algorithms are implemented in C++ with CUDA and Python bindings, running in a fully configured Docker environment with Open3D and Pangolin for visualization.
 
+### Repository Structure
+
+```text
+PointcloudProcessingSample_CUDA/
+├── build/                                      # Build outputs
+├── data/                                       # Sample point cloud data
+├── doc/                                        # Documentation files
+├── docker/                                     # Docker configuration files
+│   ├── build.sh                                # Script to build Docker image
+│   ├── Dockerfile                              # Docker image definition
+│   ├── run.sh                                  # Script to run Docker container
+├── script/                                     # Utility scripts
+├── src/                                        # Source code
+├── CMakeLists.txt                              # CMake build configuration
+├── LICENSE                                     # License file
+├── README.md                                   # Project documentation
+```
+
 ### Key Features
 
 **🚀 GPU Acceleration:** All algorithms leverage CUDA for massive parallelism
@@ -133,6 +151,74 @@ export VNC_PORT=5901
 export JUPYTER_PORT=8889
 ./run.sh
 ```
+
+### Dataset
+
+The following dataset formats are currently supported: ModelNet40 (OFF format) and PCD (Point Cloud Data) files.
+
+### ModelNet40
+
+The dataset used is [ModelNet40](http://modelnet.cs.princeton.edu/), a widely used benchmark dataset for 3D shape classification and segmentation.
+
+**Download and Extraction**
+
+```bash
+# Download the ModelNet40 dataset
+wget https://modelnet.cs.princeton.edu/ModelNet40.zip
+
+# Extract to the data directory
+unzip ModelNet40.zip
+```
+
+**Data Format Conversion**
+
+The raw ModelNet40 data is in OFF format. Use the provided `off2txt.py` script to convert it to TXT pointcloud files:
+
+```bash
+# Basic usage with default parameters
+python script/off2txt.py
+
+# Specify custom source and target directories
+python script/off2txt.py --source /workspace/data/ModelNet40 --target /workspace/data/ModelNet40_txt
+
+# Adjust the number of sampled points per point cloud
+python script/off2txt.py --num-points 8192
+```
+
+| Argument | Short | Default | Description |
+| ----- | ---- | ---- | ---- |
+| `--source` | `-s` | `/workspace/data/ModelNet40` | ModelNet40 source directory path |
+| `--target` | `-t` | `/workspace/data/ModelNet40_txt` | Point cloud output directory path |
+| `--num-points` | `-n` | `4096` | Number of points to sample per mesh |
+
+**Visualization Comparison**
+
+Use the `vis_pc_txt.py` script to visualize both OFF files and converted TXT files, allowing visual verification of the conversion quality:
+
+- **Green mesh**: Original OFF file with vertex normals
+- **Red point cloud**: Converted TXT point cloud file
+
+```bash
+# Visualize default airplane sample
+python script/vis.py
+
+# Visualize specific files
+python script/vis.py --off /workspace/data/ModelNet40/chair/train/chair_0001.off \
+                     --txt /workspace/data/ModelNet40_txt/chair/train/chair_0001.txt
+```
+
+- OFF files: Display the original mesh model
+- TXT files: Display the sampled point cloud
+
+| Argument | Short | Default | Description |
+| ----- | ---- | ---- | ---- |
+| `--off` | `-o` | `/workspace/data/ModelNet40/airplane/train/airplane_0001.off` | Path to the OFF mesh file for visualization |
+| `--txt` | `-x` | `/workspace/data/ModelNet40_txt/airplane/train/airplane_0001.txt` | Path to the TXT pointcloud file for visualization |
+
+2. PCD
+
+NO IMPLEMENT
+
 ## 🔧 Building Examples
 
 ## 💻 Usage Examples
