@@ -10,8 +10,11 @@ __global__ void __to_device(const float* points, const int point_num, float* d_p
 
 }
 
-Pointcloud::Pointcloud()
-{}
+Pointcloud::Pointcloud(bool vis)
+{
+    this->vis = vis;
+    if (this->vis) display = std::make_unique<display::Display>("pointcloud");
+}
 
 bool Pointcloud::read_pcd_bin(const std::string& filename, std::vector<PointXYZIL>& points, PCDInfo& info)
 {
@@ -93,8 +96,14 @@ bool Pointcloud::read_txt_xyz(const std::string& filename)
 
     points_num = line_count;
 
+    if (this->vis)
+    {
+        display->set_pointcloud_xyz(h_points, points_num);
+    }
+
     CUDA_CHECK(cudaMalloc(&d_points, sizeof(float)*points_num));
-    to_device(h_points, points_num, d_points);
+    // to_device(h_points, points_num, d_points);
+    return true;
 }
 
 void Pointcloud::to_device(const float* h_points, const int points_num, float* d_points)

@@ -12,13 +12,22 @@ namespace display {
 class Display {
 
 public:
-    Display(int point_num, std::string vehicle_type, int ratio);
+    Display(const std::string win_name);
     ~Display();
 
 public:
-    void set_pointcloud();
+    void set_pointcloud_xyz(const float* points, const int points_num);
     void set_normal_vector();
 
+private:
+    void show();
+
+private:
+    std::thread thread;
+    std::string win_name;
+
+    float* points;
+    int points_num;
 };
 
 }
