@@ -23,7 +23,6 @@ void Timer::stop_gpu() {
 }
 
 void Timer::stop_gpu(std::string msg){
-    printf("aaaaaaaaa\n");
     cudaEventRecord(_gStop, 0);
     char buff[100];
 
