@@ -40,7 +40,7 @@ void Display::show()
 		glColor3f(0,1,0);
 		for (int i=0; i<points_num; i++)
 		{
-			glVertex3f(points[i*3+0], points[i*3+1], points[i*3+2]);
+			glVertex3f(points[i*4+0], points[i*4+1], points[i*4+2]);
 		}
 		glEnd();
         
