@@ -2,14 +2,6 @@
 
 namespace pc {
 
-__global__ void __to_device(const float* points, const int point_num, float* d_points)
-{
-    int threadid = blockDim.x * blockIdx.x + threadIdx.x;
-	if (threadid >= point_num) return;
-
-
-}
-
 Pointcloud::Pointcloud(bool vis)
 {
     this->vis = vis;
@@ -43,7 +35,7 @@ bool Pointcloud::read_pcd_bin(const std::string& filename, std::vector<PointXYZI
     return true;
 }
 
-bool Pointcloud::read_txt_xyz(const std::string& filename)
+bool Pointcloud::read_txt_xyz(const std::string& filename, float* output_points, int& output_points_num)
 {
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
@@ -63,7 +55,7 @@ bool Pointcloud::read_txt_xyz(const std::string& filename)
     file.seekg(0, std::ios::beg);
 
     int points_num = 0;
-    float* h_points = (float*)malloc(line_count*3*sizeof(float));
+    float* h_points = (float*)malloc(line_count*4*sizeof(float));
     if (!h_points)
     {
         LOGE("Failed to allocate host memory!");
@@ -85,9 +77,10 @@ bool Pointcloud::read_txt_xyz(const std::string& filename)
         float x, y, z;
         ss >> x >> y >> z;
         
-        h_points[point_idx * 3 + 0] = x;
-        h_points[point_idx * 3 + 1] = y;
-        h_points[point_idx * 3 + 2] = z;
+        h_points[point_idx * 4 + 0] = x;
+        h_points[point_idx * 4 + 1] = y;
+        h_points[point_idx * 4 + 2] = z;
+        h_points[point_idx * 4 + 3] = -1;
         
         point_idx++;
     }
@@ -101,16 +94,10 @@ bool Pointcloud::read_txt_xyz(const std::string& filename)
         display->set_pointcloud_xyz(h_points, points_num);
     }
 
-    CUDA_CHECK(cudaMalloc(&d_points, sizeof(float)*points_num));
-    // to_device(h_points, points_num, d_points);
+    CUDA_CHECK(cudaMemcpy(output_points, h_points, sizeof(float)*points_num*4, cudaMemcpyHostToDevice));
+    output_points_num = points_num;
+    delete[] h_points;
     return true;
-}
-
-void Pointcloud::to_device(const float* h_points, const int points_num, float* d_points)
-{
-    int block_size  = 256;
-    int grid_size   = (points_num + block_size - 1) / block_size; 
-    __to_device<<<grid_size, block_size>>>(h_points, points_num, d_points);
 }
 
 bool Pointcloud::parse_pcd_header(std::ifstream& file, PCDInfo& info)

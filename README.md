@@ -25,13 +25,13 @@ PointcloudProcessingSample_CUDA/
 
 ### Key Features
 
-**🚀 GPU Acceleration:** All algorithms leverage CUDA for massive parallelism
+**GPU Acceleration:** All algorithms leverage CUDA for massive parallelism
 
-**🔧 Complete Environment:** Docker image with CUDA 12.1, Open3D, Pangolin, and VNC
+**Complete Environment:** Docker image with CUDA 12.1, Open3D, Pangolin, and VNC
 
-**📊 Real-time Visualization:** 3D visualization with Pangolin and Open3D
+**Real-time Visualization:** 3D visualization with Pangolin and Open3D
 
-**🔬 Production Ready:** Optimized for large-scale pointcloud processing
+**Production Ready:** Optimized for large-scale pointcloud processing
 
 ## 📦 Included Algorithms
 
@@ -66,7 +66,7 @@ chmod +x build.sh run.sh
 ```
 Follow the interactive menu to choose your preferred mode.
 
-### 🛠️ Build Script (build.sh)
+### Build Script (build.sh)
 
 #### Usage
 
@@ -95,7 +95,7 @@ Follow the interactive menu to choose your preferred mode.
 ./build.sh my-cuda-image latest ./docker/
 ```
 
-### 🏃 Run Script (run.sh)
+### Run Script (run.sh)
 
 #### Usage
 
@@ -219,7 +219,7 @@ python script/vis.py --off /workspace/data/ModelNet40/chair/train/chair_0001.off
 
 NO IMPLEMENT
 
-## 🔧 Building Examples
+## 🛠️ Building Examples
 
 ## 💻 Usage Examples
 
@@ -255,7 +255,7 @@ export GALLIUM_DRIVER=llvmpipe
 
 **Network Issues (China)**
 
-1. If you're in China and experiencing Docker pull timeouts, you can use the image source in China, like [aityp](docker.aityp.com).
+1. If you're in China and experiencing Docker pull timeouts, you can use the image source in China, like [aityp](http://docker.aityp.com).
 
 ## 📄 License
 

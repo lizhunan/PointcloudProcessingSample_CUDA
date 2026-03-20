@@ -18,6 +18,8 @@ include_directories(
 
 add_subdirectory(src/common)
 add_subdirectory(src/display)
+add_subdirectory(src/feature_detection)
+add_subdirectory(src/feature_description)
 
 cuda_add_executable(Sample 
     src/main.cpp
@@ -26,6 +28,8 @@ cuda_add_executable(Sample
 target_link_libraries(Sample
     common
     display
+    feature_detection
+    feature_description
     ${Pangolin_LIBRARIES}
     Eigen3::Eigen
 )

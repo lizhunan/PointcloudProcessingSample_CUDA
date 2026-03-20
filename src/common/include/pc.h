@@ -42,17 +42,13 @@ public:
     bool read_pcd_ascii();
     bool read_pcd_bin(const std::string& filename, std::vector<PointXYZIL>& points,PCDInfo& info);
     bool read_bin();
-    bool read_txt_xyz(const std::string& filename);
+    bool read_txt_xyz(const std::string& filename, float* output_points, int& points_num);
 
-    void to_device(const float* points, const int point_num, float* d_points);
-    void to_host();
 private:
     bool parse_pcd_header(std::ifstream& file, PCDInfo& info);
 
 private:
     bool vis;
-
-    float* d_points;
 
 private:
     std::shared_ptr<logger::Logger> logger;
