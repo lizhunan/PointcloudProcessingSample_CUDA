@@ -96,6 +96,7 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
     int grid_num    = (points_num+1024-1)/1024;
     int block_num   = 1024;
     bf_knn<<<grid_num, block_num>>>(d_points, points_num, k, d_neighbors);
+    CUDA_CHECK(cudaMemcpy(neighbors, d_neighbors, sizeof(int)*points_num*(k+1), cudaMemcpyDeviceToHost));
 
     if (this->vis)
     {
@@ -107,6 +108,7 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
         }
         display->set_neighbors(h_neighbors, k, 2);
         display->set_pointcloud_xyz(h_points, points_num);
+        delete[] h_neighbors;
     }
 
     // Free GPU memory
