@@ -3,7 +3,7 @@
 namespace neighbor {
 
 /**
- * @brief Brute-force KNN search kernel on GPU.
+ * @brief Brute-force KNN search
  *
  * @details
  *  - Each thread processes one query point.
