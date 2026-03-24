@@ -14,7 +14,13 @@ public:
     ~SHOT();
 
 public:
-    void detector(const float* points, const int points_num, const float r, bool *is_keypoints);
+    void detector(const float* points, const int points_num, 
+                const float radius, const float bins_azimuth, const float bins_elevation,
+                const float bins_radial, const int bins_hist,
+                float* feat);
+
+private:
+    void local_reference_frame(const float* points);
 
 private:
     bool vis;
