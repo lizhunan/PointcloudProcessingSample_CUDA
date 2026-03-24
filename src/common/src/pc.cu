@@ -55,7 +55,7 @@ bool Pointcloud::read_txt_xyz(const std::string& filename, float* output_points,
     file.seekg(0, std::ios::beg);
 
     int points_num = 0;
-    float* h_points = (float*)malloc(line_count*4*sizeof(float));
+    float* h_points = (float*)malloc(line_count*POINT_DIM*sizeof(float));
     if (!h_points)
     {
         LOGE("Failed to allocate host memory!");
@@ -77,10 +77,12 @@ bool Pointcloud::read_txt_xyz(const std::string& filename, float* output_points,
         float x, y, z;
         ss >> x >> y >> z;
         
-        h_points[point_idx * 4 + 0] = x;
-        h_points[point_idx * 4 + 1] = y;
-        h_points[point_idx * 4 + 2] = z;
-        h_points[point_idx * 4 + 3] = -1;
+        h_points[point_idx * POINT_DIM + 0] = x; // x
+        h_points[point_idx * POINT_DIM + 1] = y; // y
+        h_points[point_idx * POINT_DIM + 2] = z; // z
+        h_points[point_idx * POINT_DIM + 3] = 1; // intensity
+        h_points[point_idx * POINT_DIM + 4] = point_idx; //index
+        h_points[point_idx * POINT_DIM + 5] = -1; // label
         
         point_idx++;
     }
@@ -94,7 +96,7 @@ bool Pointcloud::read_txt_xyz(const std::string& filename, float* output_points,
         display->set_pointcloud_xyz(h_points, points_num);
     }
 
-    CUDA_CHECK(cudaMemcpy(output_points, h_points, sizeof(float)*points_num*4, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(output_points, h_points, sizeof(float)*points_num*POINT_DIM, cudaMemcpyHostToDevice));
     output_points_num = points_num;
     delete[] h_points;
     return true;

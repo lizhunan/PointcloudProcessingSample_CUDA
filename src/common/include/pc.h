@@ -10,6 +10,8 @@
 #include "cuda_base.h"
 #include "/workspace/src/display/include/display.h"
 
+#define POINT_DIM 6
+
 namespace pc {
 
 struct PointXYZIL
