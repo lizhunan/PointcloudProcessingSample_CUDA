@@ -11,6 +11,8 @@ cuda_add_library(${MODULE_NAME} STATIC
     src/pc.cu
     src/timer.cpp
     src/logger.cpp
+    src/mat.cu
+    src/neighbor.cu
 )
 
 include_directories(
