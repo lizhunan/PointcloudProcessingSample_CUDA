@@ -1,0 +1,253 @@
+#ifndef __MAT_H__
+#define __MAT_H__
+
+#include <math.h>
+#include "logger.h"
+#include "/workspace/src/display/include/display.h"
+#include "cuda_base.h"
+
+#define POINT_DIM 6     // Point dimension: [x, y, z, intensity, index, label]
+
+namespace mat {
+
+/**
+ * @brief Compute Euclidean distance between two 3D points.
+ *
+ * @param p1 Pointer to first point (size >= 3)
+ * @param p2 Pointer to second point (size >= 3)
+ * @return Distance between p1 and p2
+ */
+__device__ inline float distf(float* p1, float* p2)
+{
+    return sqrtf(powf(p1[0] - p2[0], 2) + powf(p1[1] - p2[1], 2) + powf(p1[2] - p2[2], 2));
+}
+
+/**
+ * @brief Jacobi eigen decomposition for 3x3 symmetric matrix (CUDA device).
+ *
+ * @details
+ *  - Input: symmetric matrix A
+ *  - Output:
+ *      eigenvalues  -> diagonal elements
+ *      eigenvectors -> column vectors
+ *
+ *  - Iterative orthogonal rotation
+ *  - Typically converges in < 10 iterations for 3x3
+ *
+ * @param A         Input covariance matrix (modified in-place)
+ * @param eigval    Output eigenvalues (size 3)
+ * @param eigvec    Output eigenvectors (3x3, column-major)
+ */
+__device__ inline void jacobi_3x3(float A[3][3], float eigval[3], float eigvec[3][3])
+{
+    // Initialize the eigenvector matrix to an identity matrix
+    eigvec[0][0]=1; eigvec[0][1]=0; eigvec[0][2]=0;
+    eigvec[1][0]=0; eigvec[1][1]=1; eigvec[1][2]=0;
+    eigvec[2][0]=0; eigvec[2][1]=0; eigvec[2][2]=1;
+
+    // Jacobi iteration
+    for (int iter = 0; iter < 10; iter++)
+    {
+        // Find the largest non diagonal element
+        int p = 0, q = 1;
+        float max = fabsf(A[0][1]);
+
+        if (fabsf(A[0][2]) > max) {
+            p = 0; q = 2;
+            max = fabsf(A[0][2]);
+        }
+
+        if (fabsf(A[1][2]) > max) {
+            p = 1; q = 2;
+            max = fabsf(A[1][2]);
+        }
+
+        // Check converges
+        if (max < 1e-6f) break;
+
+        float app = A[p][p];
+        float aqq = A[q][q];
+        float apq = A[p][q];
+
+        // Compute rotation
+        float phi = 0.5f * atan2f(2.0f * apq, (aqq - app));
+
+        float c = cosf(phi);
+        float s = sinf(phi);
+
+        // Update matrix A
+        for (int i = 0; i < 3; i++)
+        {
+            float aip = A[i][p];
+            float aiq = A[i][q];
+
+            A[i][p] = c * aip - s * aiq;
+            A[i][q] = s * aip + c * aiq;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            float api = A[p][i];
+            float aqi = A[q][i];
+
+            A[p][i] = c * api - s * aqi;
+            A[q][i] = s * api + c * aqi;
+        }
+
+        // Enforced symmetry (numerical correction), to prevent floating-point errors from disrupting symmetry
+        A[p][q] = 0.0f;
+        A[q][p] = 0.0f;
+
+        // Update eigvec
+        for (int i = 0; i < 3; i++)
+        {
+            float vip = eigvec[i][p];
+            float viq = eigvec[i][q];
+
+            eigvec[i][p] = c * vip - s * viq;
+            eigvec[i][q] = s * vip + c * viq;
+        }
+    }
+
+    eigval[0] = A[0][0];
+    eigval[1] = A[1][1];
+    eigval[2] = A[2][2];
+}
+
+/**
+ * @brief Compute PCA (covariance + eigen decomposition).
+ *
+ * @details
+ *  - Each thread processes one point
+ *  - Computes covariance matrix from neighbors
+ *  - Outputs eigenvalues and eigenvectors
+ *
+ * @param points            Input points
+ * @param neighbor_indices  Neighbors indices
+ * @param N                 Number of points
+ * @param k                 Number of neighbors
+ * @param eigenvalues       Output eigenvalues [N * 3]
+ * @param eigenvectors      Output eigenvectors [N * 9]
+ */
+__device__ inline void pca(const float* points, const int poins_num, const int* neighbor_indices, const int k,
+                            float* eigenvalues, float* eigenvectors)
+{
+    int threadid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (threadid >= poins_num) return;
+
+    int stride = k + 1;
+    int base   = threadid * stride; // Current point index in neighbor_indices
+
+    // Centroid
+    float cx = 0.f, cy = 0.f, cz = 0.f;
+    for (int i = 1; i <= k; i++)
+    {
+        int idx = neighbor_indices[base + i];
+
+        cx += points[idx * POINT_DIM + 0];
+        cy += points[idx * POINT_DIM + 1];
+        cz += points[idx * POINT_DIM + 2];
+    }
+    cx /= k; cy /= k; cz /= k;
+
+    // Covariance
+    float C[3][3] = {0};
+    for (int i = 1; i <= k; i++)
+    {
+        int idx = neighbor_indices[base + i];
+
+        float x = points[idx * POINT_DIM + 0] - cx;
+        float y = points[idx * POINT_DIM + 1] - cy;
+        float z = points[idx * POINT_DIM + 2] - cz;
+
+        C[0][0] += x*x; C[0][1] += x*y; C[0][2] += x*z;
+        C[1][0] += y*x; C[1][1] += y*y; C[1][2] += y*z;
+        C[2][0] += z*x; C[2][1] += z*y; C[2][2] += z*z;
+    }
+
+    // Eigen decomposition
+    float eigval[3];
+    float eigvec[3][3];
+
+    jacobi_3x3(C, eigval, eigvec);
+
+    // Store
+    for (int i = 0; i < 3; i++)
+    {
+        eigenvalues[threadid * 3 + i] = eigval[i];
+
+        eigenvectors[threadid * 9 + i*3 + 0] = eigvec[i][0];
+        eigenvectors[threadid * 9 + i*3 + 1] = eigvec[i][1];
+        eigenvectors[threadid * 9 + i*3 + 2] = eigvec[i][2];
+    }
+}
+
+class MAT {
+
+public:
+
+    /**
+     * @class MAT
+     * @brief GPU-based math utilities for point cloud processing.
+     *
+     * @details
+     *  - Provides PCA computation on GPU
+     *  - Computes normals using eigen decomposition
+     *  - Supports optional visualization
+     */
+    MAT();
+
+    /**
+     * @class MAT
+     * @brief GPU-based math utilities for point cloud processing with visualization option.
+     *
+     * @details
+     *  - Provides PCA computation on GPU
+     *  - Computes normals using eigen decomposition
+     *  - Supports optional visualization
+     *  @param vis Enable visualization
+     */
+    MAT(bool vis);
+
+    /**
+     * @brief Destructor.
+     */
+    ~MAT();
+
+public:
+
+    /**
+     * @brief Estimate normals for input point cloud.
+     *
+     * @details
+     *  - Uploads data to GPU
+     *  - Launches PCA + normal extraction kernel
+     *  - Downloads normals to host
+     *  - Optionally visualizes results
+     *
+     * @param h_points      Host point cloud
+     * @param points_num    Number of points
+     * @param h_neighbors   Neighbor indices
+     * @param k             Number of neighbors
+     * @param normals       Output normals (host)
+     */
+    void normals_estimator(const float* h_points, const int points_num, const int* h_neighbors, const int k, float* normals);
+
+    private:
+    std::shared_ptr<display::Display>   display;        // Visualization module
+
+private:
+    bool vis = false;   // Enable visualization
+
+    /* GPU memory */
+    float*      d_points;           // Device point cloud
+    int*        d_neighbors;        // Device neighbor indices
+    float*      d_eigenvalues;      // Eigenvalues [N * 3]
+    float*      d_eigenvectors;     // Eigenvectors [N * 9]
+    float*      d_normals;          // Normals [N * 3]
+
+};
+
+}
+
+#endif
