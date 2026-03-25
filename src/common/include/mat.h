@@ -17,9 +17,47 @@ namespace mat {
  * @param p2 Pointer to second point (size >= 3)
  * @return Distance between p1 and p2
  */
-__device__ inline float distf(float* p1, float* p2)
+__device__ inline float distf(const float* p1, const float* p2)
 {
     return sqrtf(powf(p1[0] - p2[0], 2) + powf(p1[1] - p2[1], 2) + powf(p1[2] - p2[2], 2));
+}
+
+/**
+ * @brief Compute dot product of two 3D vectors.
+ *
+ * @details
+ *  This function calculates the inner product between two 3D vectors:
+ *
+ *      dot(a, b) = a_x * b_x + a_y * b_y + a_z * b_z
+ *
+ *  Mathematical formulation:
+ *
+ *      Given:
+ *          a = (a_x, a_y, a_z)
+ *          b = (b_x, b_y, b_z)
+ *
+ *      Then:
+ *          dot(a, b) = a_x b_x + a_y b_y + a_z b_z
+ *
+ *  Geometric interpretation:
+ *      - Measures similarity between two vectors
+ *      - If vectors are normalized:
+ *
+ *            dot(a, b) = cos(θ)
+ *
+ *        where θ is the angle between a and b
+ *
+ *      - Range (for unit vectors):
+ *            [-1, 1]
+ *
+ * @param a Pointer to first 3D vector (size = 3)
+ * @param b Pointer to second 3D vector (size = 3)
+ *
+ * @return Dot product (scalar)
+ */
+__device__ inline float dot3f(const float* a, const float* b)
+{
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
 
 /**
