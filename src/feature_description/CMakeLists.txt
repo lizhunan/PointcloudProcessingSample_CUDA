@@ -19,5 +19,6 @@ include_directories(
 )
 
 target_link_libraries(${MODULE_NAME}
+    common
     Eigen3::Eigen
 )

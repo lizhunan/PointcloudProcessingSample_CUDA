@@ -21,6 +21,7 @@ public:
     void set_pointcloud_xyz(const float* points, const int points_num);
     void set_neighbors(const int* neighbors, const int k, const int point_idx=0);
     void set_normals(const float* normals, const int points_num);
+    void set_lrfs(const float* lrf, const int lrf_idx, const int points_num);
 
 private:
     void show();
@@ -34,6 +35,8 @@ private:
     int* neighbors;
     int neighbors_k;
     float* normals;
+    float* lrfs;
+    int lrf_idx;
 };
 
 }
