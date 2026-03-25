@@ -366,9 +366,6 @@ __global__ void binning(const float* points, const int points_num, const int* ne
         // // Load neighbor point p_i
         float neighbor[3] = {points[idx * POINT_DIM + 0], points[idx * POINT_DIM + 1], points[idx * POINT_DIM + 2]};  
         
-        // 将临近点转换到LRF坐标系下
-        // 公式: [ρ, α, β] 是点在LRF中的球坐标
-        // ρ: 径向距离，α: 方位角，β: 仰角
         // Transform to LRF and compute spherical coords
         // 
         // (ρ, α, β):
