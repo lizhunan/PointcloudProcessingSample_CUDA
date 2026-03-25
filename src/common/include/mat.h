@@ -23,6 +23,121 @@ __device__ inline float distf(float* p1, float* p2)
 }
 
 /**
+ * @brief Compute weighted covariance matrix for a given keypoint.
+ *
+ * @details
+ *  This function constructs a **weighted covariance matrix** of the local neighborhood
+ *  for a given point p_k. It is commonly used in:
+ *
+ *  - Local Reference Frame (LRF) estimation
+ *  - SHOT / ISS feature computation
+ *  - PCA-based geometric analysis
+ *
+ *  Mathematical formulation:
+ *
+ *      Let p_k be the keypoint and p_i its neighbors.
+ *
+ *      d_i = p_i - p_k
+ *      w_i = | ||p_i - p_k|| - R |
+ *
+ *      Then the covariance matrix is:
+ *
+ *          M = (1 / Σ w_i) Σ w_i * (d_i * d_i^T)
+ *
+ *  where:
+ *      - R is the support radius
+ *      - w_i is the radial weight
+ *
+ *  Geometric interpretation:
+ *      - Captures local surface structure
+ *      - Eigenvectors → principal directions
+ *      - Smallest eigenvalue → surface normal
+ *
+ *  Notes:
+ *      - Neighbor index layout: [self, n1, n2, ..., nk]
+ *      - The first entry (self) is skipped
+ *      - Weight emphasizes points near the boundary (depending on formulation)
+ *
+ * @param points            Pointer to input pointcloud array [N x POINT_DIM]
+ * @param p_id              Index of the current keypoint
+ * @param points_num        Total number of points
+ * @param neighbor_indices  Neighbor index array [N x (k+1)]
+ * @param k                 Number of neighbors
+ * @param radius            Support radius for weighting
+ * @param M                 Output 3x3 covariance matrix (accumulated)
+ *
+ * @return true  If covariance matrix is valid (norm > threshold)
+ * @return false If degenerate (insufficient or zero weights)
+ */
+__device__ inline bool conv_weight(const float* points, const int p_id, const int points_num, 
+                                    const int* neighbor_indices, const int k, const int radius, float M[3][3])
+{
+    // Load keypoint coordinates p_k
+    float point[3] = {points[p_id*POINT_DIM+0], points[p_id*POINT_DIM+1], points[p_id*POINT_DIM+2]};
+
+    // Neighbor indexing
+    // Layout:
+    //   neighbor_indices[p_id * (k+1) + 0]     → self index
+    //   neighbor_indices[p_id * (k+1) + i]     → i-th neighbor
+    int stride = k + 1;
+    int base   = p_id * stride; // Current point index in neighbor_indices
+
+    // Iterate over k neighbors (skip self at index 0)
+    float norm = 0.0f;  // Normalization term Σ w_i
+    for (int i = 1; i <= k; i++)
+    {
+        int idx = neighbor_indices[base + i];
+
+        float neighbor[3]   = {points[idx * POINT_DIM + 0], points[idx * POINT_DIM + 1], points[idx * POINT_DIM + 2]};  // Load neighbor point p_i
+        float dist          = mat::distf(point, neighbor);                                                              // Euclidean distance: dist = ||p_i - p_k||
+        float weight        = fabs(dist - radius);                                                                      // Radial weight function: w_i = |dist - radius|
+        norm                += weight;
+
+        // Relative coordinate d_i = p_i - p_k
+        float dx = points[idx * POINT_DIM + 0] - points[p_id*POINT_DIM+0];
+        float dy = points[idx * POINT_DIM + 1] - points[p_id*POINT_DIM+1];
+        float dz = points[idx * POINT_DIM + 2] - points[p_id*POINT_DIM+2];
+
+        /**
+         * Accumulate weighted outer product
+         *
+         * M += w_i * (d_i * d_i^T)
+         *
+         * Expanded form:
+         *  M_xx += w_i * dx * dx
+         *  M_xy += w_i * dx * dy
+         *  ...
+         */
+        M[0][0] += weight*dx*dx; M[0][1] += weight*dx*dy; M[0][2] += weight*dx*dz;
+        M[1][0] += weight*dy*dx; M[1][1] += weight*dy*dy; M[1][2] += weight*dy*dz;
+        M[2][0] += weight*dz*dx; M[2][1] += weight*dz*dy; M[2][2] += weight*dz*dz;
+    }
+   
+    /**
+     * Normalize covariance matrix
+     *
+     * M = M / Σ w_i
+     *
+     * Prevent division by zero (degenerate neighborhood)
+     */
+    if (norm > 1e-6f)
+    {
+        M[0][0] /= norm; M[0][1] /= norm; M[0][2] /= norm; 
+        M[1][0] /= norm; M[1][1] /= norm; M[1][2] /= norm; 
+        M[2][0] /= norm; M[2][1] /= norm; M[2][2] /= norm; 
+        return true;
+    }else
+    {
+        /**
+         * Degenerate case:
+         *  - No valid neighbors
+         *  - All weights are zero
+         */
+        return false;
+    }
+}
+
+/**
  * @brief Jacobi eigen decomposition for 3x3 symmetric matrix (CUDA device).
  *
  * @details
@@ -129,11 +244,11 @@ __device__ inline void jacobi_3x3(float A[3][3], float eigval[3], float eigvec[3
  * @param eigenvalues       Output eigenvalues [N * 3]
  * @param eigenvectors      Output eigenvectors [N * 9]
  */
-__device__ inline void pca(const float* points, const int poins_num, const int* neighbor_indices, const int k,
+__device__ inline void pca(const float* points, const int points_num, const int* neighbor_indices, const int k,
                             float* eigenvalues, float* eigenvectors)
 {
     int threadid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (threadid >= poins_num) return;
+    if (threadid >= points_num) return;
 
     int stride = k + 1;
     int base   = threadid * stride; // Current point index in neighbor_indices

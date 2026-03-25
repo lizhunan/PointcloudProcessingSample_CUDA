@@ -25,7 +25,7 @@ __global__ void normals_pca(const float* points, const int points_num, const int
     if (threadid >= points_num) return;
 
     pca(points, points_num, neighbor_indices, k, eigenvalues, eigenvectors);
-    // printf("%d eigenvalues: %f, %f, %f\n", threadid, eigenvalues[threadid * 3 + 0], eigenvalues[threadid * 3 + 1], eigenvalues[threadid * 3 + 2]);
+
     // Find min eigenvalues
     int min_id      = 0;
     float min_val   = eigenvalues[threadid * 3 + 0];
