@@ -176,6 +176,68 @@ __device__ inline bool conv_weight(const float* points, const int p_id, const in
 }
 
 /**
+ * @brief Compute bin index and linear interpolation weights.
+ *
+ * @details
+ *  This function maps a scalar value into histogram bins with linear interpolation.
+ *
+ *  Given:
+ *      bin_value   = value / step
+ *      bin_idx     = floor(v)
+ *
+ *  Then:
+ *      lower bin: i       with weight (1 - (v - i))
+ *      upper bin: i + 1   with weight (v - i)
+ *
+ *  Boundary handling:
+ *      - If value < 0        → assign to bin 0
+ *      - If value >= max_val → assign to last bin
+ *
+ *  Output:
+ *      Up to 2 bins with corresponding weights
+ *
+ * @param value     Input value
+ * @param step      Bin width
+ * @param max_val   Maximum value range
+ * @param bins      Output bin indices (size 2)
+ * @param weights   Output weights (size 2)
+ * @param count     Number of valid bins (1 or 2)
+ */
+__device__ inline void binning_weight(const float value, const float step, const float max_val, int bins[2], float weights[2], int& count)
+{
+    float bin_value = value/step;
+    int bin_idx     = (int)floorf(bin_value);
+    int max_bin     = (int)(max_val/step);
+    float w_upper   = bin_value - bin_idx;
+    float w_lower   = 1.0f - w_upper;
+
+    // Boundary: below range
+    if (bin_idx < 0)
+    {
+        bins[0]     = 0;
+        weights[0]  = 1.0f;
+        count       = 1;
+        return;
+    }
+
+    // Boundary: above range
+    if (bin_idx >= max_bin)
+    {
+        bins[0]     = max_bin - 1;
+        weights[0]  = 1.0f;
+        count       = 1;
+        return;
+    }
+
+    // Linear interpolation
+    bins[0]     = bin_idx;
+    weights[0]  = w_lower;
+    bins[1]     = bin_idx+1;
+    weights[1]  = w_upper;
+    count       = 2;          
+}
+
+/**
  * @brief Jacobi eigen decomposition for 3x3 symmetric matrix (CUDA device).
  *
  * @details
