@@ -26,8 +26,11 @@ void Timer::stop_gpu(std::string msg){
     cudaEventRecord(_gStop, 0);
     char buff[100];
 
+    // Ensure events are completed
     CUDA_CHECK(cudaEventSynchronize(_gStart));
     CUDA_CHECK(cudaEventSynchronize(_gStop));
+    
+    // Compute elapsed time (ms)
     cudaEventElapsedTime(&_timeElasped, _gStart, _gStop);
 
     sprintf(buff, "\t%-60s uses %.6lf ms", msg.c_str(), _timeElasped);
