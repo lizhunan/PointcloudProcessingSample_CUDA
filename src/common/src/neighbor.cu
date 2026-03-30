@@ -55,7 +55,7 @@ __global__ void bf_knn(const float* points, const int points_num, const int k, i
             if (best_dist[j] > max_dist)
             {
                 max_dist    = best_dist[j];
-                max_id      = points[j*POINT_DIM+4];
+                max_id      = j;
             }
         }
 
@@ -89,6 +89,7 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
     // Allocate device memory
     CUDA_CHECK(cudaMalloc((void **)&d_points,       sizeof(float)*points_num*POINT_DIM));
     CUDA_CHECK(cudaMalloc((void **)&d_neighbors,    sizeof(int)*points_num*(k+1)));
+    CUDA_CHECK(cudaMemset(d_neighbors, -1,           sizeof(int)*points_num*(k+1)));
     
     // Copy pointcloud to GPU
     CUDA_CHECK(cudaMemcpy(d_points, h_points, sizeof(float)*points_num*POINT_DIM, cudaMemcpyHostToDevice));
@@ -102,11 +103,16 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
     {
         int* h_neighbors = new int[points_num*(k+1)];
         CUDA_CHECK(cudaMemcpy(h_neighbors, d_neighbors, sizeof(int)*points_num*(k+1), cudaMemcpyDeviceToHost));
-        for (int i=0; i< 2*k; i++)
+        int base_idx = 0 * k;
+        int* debug_neighbor = new int[k+1];
+        for (int i=0; i<k+1; i++)
         {
-            LOGV("[%d], h_neighbors: %d\n", i, h_neighbors[i]);
+            debug_neighbor[i] = h_neighbors[base_idx + i];
         }
-        display->set_neighbors(h_neighbors, k, 2);
+        for (int i=0; i<points_num; i++)
+            for (int j=0; j<k+1; j++)
+                if (debug_neighbor[j] == h_points[i*POINT_DIM+4]) LOGD("[%d], base:%d, neighbors: %d, (%f, %f, %f)", 20, base_idx, debug_neighbor[j], h_points[i*POINT_DIM+0], h_points[i*POINT_DIM+1], h_points[i*POINT_DIM+2]);
+        display->set_neighbors(h_neighbors, k, 0);
         display->set_pointcloud_xyz(h_points, points_num);
         delete[] h_neighbors;
     }
