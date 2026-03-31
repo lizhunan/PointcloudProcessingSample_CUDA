@@ -175,12 +175,39 @@ __device__ inline bool conv_weight(const float* points, const int p_id, const in
     }
 }
 
-__device__ inline bool conv(const float* points, const int p_id, const int points_num, 
-                            const int* neighbor_indices, const int k, const int radius, float M[3][3])
+/**
+ * @brief Compute covariance matrix for a given keypoint (unweighted version).
+ *
+ * @details
+ *  This function constructs a **standard covariance matrix** of the local neighborhood
+ *  for a given point p_k. Unlike conv_weight(), this version does NOT use radial weights.
+ *
+ *  Mathematical formulation:
+ *
+ *      1. Compute centroid C = (1/(k+1)) * (p_k + Σ p_i)
+ *
+ *      2. Compute covariance matrix M = (1/(k+1)) * Σ (p_j - C) * (p_j - C)^T
+ *         where j runs over all points (keypoint + k neighbors)
+ *
+ *
+ *  Notes:
+ *      - Neighbor index layout: [self, n1, n2, ..., nk]
+ *      - The first entry (self) is skipped in neighbor loop but added separately
+ *      - Covariance is normalized by (k+1) points total
+ *
+ * @param points            Pointer to input pointcloud array [N x POINT_DIM]
+ * @param p_id              Index of the current keypoint
+ * @param points_num        Total number of points (unused in this version)
+ * @param neighbor_indices  Neighbor index array [N x (k+1)]
+ * @param k                 Number of neighbors (excluding self)
+ * @param radius            Support radius (unused, kept for API compatibility)
+ * @param M                 Output 3x3 covariance matrix (accumulated)
+ */
+__device__ inline void cov_mat(const float* points, const int p_id, const int points_num, 
+                                const int* neighbor_indices, const int k, const int radius, float M[3][3])
 {
     // Load keypoint coordinates p_k
     float point[3] = {points[p_id*POINT_DIM+0], points[p_id*POINT_DIM+1], points[p_id*POINT_DIM+2]};
-    if (points[p_id*POINT_DIM+4]!=56)return;
 
     // Neighbor indexing
     // Layout:
@@ -190,6 +217,7 @@ __device__ inline bool conv(const float* points, const int p_id, const int point
     int base   = p_id * stride; // Current point index in neighbor_indices
 
     // Centroid
+    // Sum all neighbor coordinates (skip self at index 0)
     float cx = 0.f, cy = 0.f, cz = 0.f;
     for (int i = 1; i <= k; i++)
     {
@@ -199,22 +227,38 @@ __device__ inline bool conv(const float* points, const int p_id, const int point
         cy += points[idx * POINT_DIM + 1];
         cz += points[idx * POINT_DIM + 2];
     }
-    cx += point[0]; cy += point[1]; cz += point[2]; 
-    cx /= (k+1); cy /= (k+1); cz /= (k+1);
+
+    cx += point[0]; cy += point[1]; cz += point[2]; // Add keypoint itself to the sum
+    cx /= (k+1); cy /= (k+1); cz /= (k+1);          // Divide by total number of points (k+1) to get centroid
 
     // Covariance
+    // Accumulate contributions from all neighbor points (i = 1 to k)
     for (int i = 1; i <= k; i++)
     {
         int idx = neighbor_indices[base + i];
 
+        // Relative coordinates from centroid
         float x = points[idx * POINT_DIM + 0] - cx;
         float y = points[idx * POINT_DIM + 1] - cy;
         float z = points[idx * POINT_DIM + 2] - cz;
 
+        /**
+         * Accumulate outer product (x,y,z) * (x,y,z)^T
+         * 
+         * Symmetric matrix, only upper triangular shown:
+         *   M[0][0] = Σ x*x    (variance along X)
+         *   M[0][1] = Σ x*y    (covariance XY)
+         *   M[0][2] = Σ x*z    (covariance XZ)
+         *   M[1][1] = Σ y*y    (variance along Y)
+         *   M[1][2] = Σ y*z    (covariance YZ)
+         *   M[2][2] = Σ z*z    (variance along Z)
+         */
         M[0][0] += x*x; M[0][1] += x*y; M[0][2] += x*z;
         M[1][0] += y*x; M[1][1] += y*y; M[1][2] += y*z;
         M[2][0] += z*x; M[2][1] += z*y; M[2][2] += z*z;
     }
+
+    // Add contribution from the keypoint itself
     float x_p = point[0] - cx;
     float y_p = point[1] - cy;
     float z_p = point[2] - cz; 
@@ -222,6 +266,7 @@ __device__ inline bool conv(const float* points, const int p_id, const int point
     M[1][0] += y_p*x_p; M[1][1] += y_p*y_p; M[1][2] += y_p*z_p;
     M[2][0] += z_p*x_p; M[2][1] += z_p*y_p; M[2][2] += z_p*z_p;
 
+    // Final covariance matrix = (1/(k+1)) * Σ (p_j - C)(p_j - C)^T
     M[0][0] = M[0][0]/(k+1); M[0][1] = M[0][1]/(k+1); M[0][2] = M[0][2]/(k+1);
     M[1][0] = M[1][0]/(k+1); M[1][1] = M[1][1]/(k+1); M[1][2] = M[1][2]/(k+1);
     M[2][0] = M[2][0]/(k+1); M[2][1] = M[2][1]/(k+1); M[2][2] = M[2][2]/(k+1);
