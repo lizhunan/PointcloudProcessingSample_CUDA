@@ -25,7 +25,7 @@ void Display::set_neighbors(const int* neighbors, const int k, const int point_i
 
 	this->neighbors = new int[k+1];
 	this->neighbors_k = k;
-	int base_idx = point_idx * k;
+	int base_idx = point_idx * (k+1);
 	for (int i=0; i<k+1; i++)
 	{
 		this->neighbors[i] = neighbors[base_idx + i];
@@ -71,11 +71,12 @@ void Display::show()
 		{
 			for (int j=0; j<this->neighbors_k; j++)
 			{
-				if (this->neighbors[j] == points[i*POINT_DIM+4]) glColor3f(1,0,0);
+				if (this->neighbors[j] == points[i*POINT_DIM+4]) {glColor3f(1,0,0);}
 			}
 			
 			glVertex3f(points[i*POINT_DIM+0], points[i*POINT_DIM+1], points[i*POINT_DIM+2]);
-			glColor3f(0,1,0);
+			if(points[i*POINT_DIM+5] == 0) 			glColor3f(1,0,0);
+			else									glColor3f(0,1,0);
 		}
 		glEnd();
 

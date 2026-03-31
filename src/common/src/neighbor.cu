@@ -32,6 +32,7 @@ __global__ void bf_knn(const float* points, const int points_num, const int k, i
     // Initialize Top-K buffers (max-distance priority)
     float   best_dist[MAX_K];
     int     best_idx[MAX_K];
+    int     filled_count = 0;
     for (int i = 0; i < k; i++)
     {
         best_dist[i] = FLT_MAX;
@@ -48,27 +49,36 @@ __global__ void bf_knn(const float* points, const int points_num, const int k, i
         float dist          = mat::distf(point, neighbor);
 
         // Find current worst (maximum distance) in Top-K
-        int     max_id      = 0;
-        float   max_dist    = best_dist[0];
-        for (int j = 1; j < k; j++)
+        if (filled_count < k)
         {
-            if (best_dist[j] > max_dist)
+            best_dist[filled_count] = dist;
+            best_idx[filled_count]  = points[i * POINT_DIM + 4];
+            filled_count++;
+        }else
+        {
+            int     max_id      = 0;
+            float   max_dist    = best_dist[0];
+            
+            for (int j = 0; j < k; j++)
             {
-                max_dist    = best_dist[j];
-                max_id      = j;
+                if (best_dist[j] > max_dist)
+                {
+                    max_dist    = best_dist[j];
+                    max_id      = j;
+                }
             }
-        }
-
-        // Replace if better neighbor found
-        if (dist < max_dist)
-        {
-            best_dist[max_id] = dist;
-            best_idx[max_id]  = points[i*POINT_DIM+4];
+            
+            if (dist < max_dist)
+            {
+                best_dist[max_id]   = dist;
+                best_idx[max_id]    = points[i * POINT_DIM + 4];
+            }
         }
     }
 
     // Write output (flattened structure)
     int base = threadid*(k+1);
+    if (points[threadid*POINT_DIM+4] == 20) printf("base: %d\n", base);
     // Self index
     neighbor_indices[base + 0] = points[threadid*POINT_DIM+4];
     // Neighbor indices
@@ -103,7 +113,7 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
     {
         int* h_neighbors = new int[points_num*(k+1)];
         CUDA_CHECK(cudaMemcpy(h_neighbors, d_neighbors, sizeof(int)*points_num*(k+1), cudaMemcpyDeviceToHost));
-        int base_idx = 0 * k;
+        int base_idx = 20 * (k+1);
         int* debug_neighbor = new int[k+1];
         for (int i=0; i<k+1; i++)
         {
@@ -112,7 +122,7 @@ void Neighbor::search_bf(const float* h_points, const int points_num, const int 
         for (int i=0; i<points_num; i++)
             for (int j=0; j<k+1; j++)
                 if (debug_neighbor[j] == h_points[i*POINT_DIM+4]) LOGD("[%d], base:%d, neighbors: %d, (%f, %f, %f)", 20, base_idx, debug_neighbor[j], h_points[i*POINT_DIM+0], h_points[i*POINT_DIM+1], h_points[i*POINT_DIM+2]);
-        display->set_neighbors(h_neighbors, k, 0);
+        display->set_neighbors(h_neighbors, k, 20);
         display->set_pointcloud_xyz(h_points, points_num);
         delete[] h_neighbors;
     }
