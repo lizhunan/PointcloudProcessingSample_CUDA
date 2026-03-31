@@ -78,7 +78,6 @@ __global__ void bf_knn(const float* points, const int points_num, const int k, i
 
     // Write output (flattened structure)
     int base = threadid*(k+1);
-    if (points[threadid*POINT_DIM+4] == 20) printf("base: %d\n", base);
     // Self index
     neighbor_indices[base + 0] = points[threadid*POINT_DIM+4];
     // Neighbor indices
