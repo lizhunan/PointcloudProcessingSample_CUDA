@@ -175,6 +175,58 @@ __device__ inline bool conv_weight(const float* points, const int p_id, const in
     }
 }
 
+__device__ inline bool conv(const float* points, const int p_id, const int points_num, 
+                            const int* neighbor_indices, const int k, const int radius, float M[3][3])
+{
+    // Load keypoint coordinates p_k
+    float point[3] = {points[p_id*POINT_DIM+0], points[p_id*POINT_DIM+1], points[p_id*POINT_DIM+2]};
+    if (points[p_id*POINT_DIM+4]!=56)return;
+
+    // Neighbor indexing
+    // Layout:
+    //   neighbor_indices[p_id * (k+1) + 0]     → self index
+    //   neighbor_indices[p_id * (k+1) + i]     → i-th neighbor
+    int stride = k + 1;
+    int base   = p_id * stride; // Current point index in neighbor_indices
+
+    // Centroid
+    float cx = 0.f, cy = 0.f, cz = 0.f;
+    for (int i = 1; i <= k; i++)
+    {
+        int idx = neighbor_indices[base + i];
+
+        cx += points[idx * POINT_DIM + 0];
+        cy += points[idx * POINT_DIM + 1];
+        cz += points[idx * POINT_DIM + 2];
+    }
+    cx += point[0]; cy += point[1]; cz += point[2]; 
+    cx /= (k+1); cy /= (k+1); cz /= (k+1);
+
+    // Covariance
+    for (int i = 1; i <= k; i++)
+    {
+        int idx = neighbor_indices[base + i];
+
+        float x = points[idx * POINT_DIM + 0] - cx;
+        float y = points[idx * POINT_DIM + 1] - cy;
+        float z = points[idx * POINT_DIM + 2] - cz;
+
+        M[0][0] += x*x; M[0][1] += x*y; M[0][2] += x*z;
+        M[1][0] += y*x; M[1][1] += y*y; M[1][2] += y*z;
+        M[2][0] += z*x; M[2][1] += z*y; M[2][2] += z*z;
+    }
+    float x_p = point[0] - cx;
+    float y_p = point[1] - cy;
+    float z_p = point[2] - cz; 
+    M[0][0] += x_p*x_p; M[0][1] += x_p*y_p; M[0][2] += x_p*z_p;
+    M[1][0] += y_p*x_p; M[1][1] += y_p*y_p; M[1][2] += y_p*z_p;
+    M[2][0] += z_p*x_p; M[2][1] += z_p*y_p; M[2][2] += z_p*z_p;
+
+    M[0][0] = M[0][0]/(k+1); M[0][1] = M[0][1]/(k+1); M[0][2] = M[0][2]/(k+1);
+    M[1][0] = M[1][0]/(k+1); M[1][1] = M[1][1]/(k+1); M[1][2] = M[1][2]/(k+1);
+    M[2][0] = M[2][0]/(k+1); M[2][1] = M[2][1]/(k+1); M[2][2] = M[2][2]/(k+1);
+}
+
 /**
  * @brief Compute bin index and linear interpolation weights.
  *
@@ -395,6 +447,11 @@ __device__ inline void pca(const float* points, const int points_num, const int*
         eigenvectors[threadid * 9 + i*3 + 1] = eigvec[i][1];
         eigenvectors[threadid * 9 + i*3 + 2] = eigvec[i][2];
     }
+}
+
+__device__ inline bool nms(const float *points, const int point_num, const int* neighors, const float nmx_r, const float* lambda3)
+{
+    
 }
 
 class MAT {
