@@ -200,11 +200,10 @@ __device__ inline bool conv_weight(const float* points, const int p_id, const in
  * @param points_num        Total number of points (unused in this version)
  * @param neighbor_indices  Neighbor index array [N x (k+1)]
  * @param k                 Number of neighbors (excluding self)
- * @param radius            Support radius (unused, kept for API compatibility)
  * @param M                 Output 3x3 covariance matrix (accumulated)
  */
 __device__ inline void cov_mat(const float* points, const int p_id, const int points_num, 
-                                const int* neighbor_indices, const int k, const int radius, float M[3][3])
+                                const int* neighbor_indices, const int k, float M[3][3])
 {
     // Load keypoint coordinates p_k
     float point[3] = {points[p_id*POINT_DIM+0], points[p_id*POINT_DIM+1], points[p_id*POINT_DIM+2]};
