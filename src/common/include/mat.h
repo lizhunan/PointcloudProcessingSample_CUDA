@@ -61,6 +61,35 @@ __device__ inline float dot3f(const float* a, const float* b)
 }
 
 /**
+ * @brief Compute cross product of two 3D vectors
+ * 
+ * @details
+ *   Computes the cross product c = a × b for 3D vectors.
+ * 
+ *   Mathematical formulation:
+ *     c = a × b = |i   j   k  |
+ *                 |a.x a.y a.z|
+ *                 |b.x b.y b.z|
+ *   
+ *     c.x = a.y * b.z - a.z * b.y
+ *     c.y = a.z * b.x - a.x * b.z
+ *     c.z = a.x * b.y - a.y * b.x
+ * 
+ * 
+ * @param a       Input vector a (3 components)
+ * @param b       Input vector b (3 components)
+ * @param result  Output vector c = a × b (3 components)
+ */
+__device__ inline void cross_product3(const float* a, const float* b, float* result)
+{
+
+    // Compute cross product components
+    result[0] = a[1] * b[2] - a[2] * b[1];  // c.x = a.y * b.z - a.z * b.y
+    result[1] = a[2] * b[0] - a[0] * b[2];  // c.y = a.z * b.x - a.x * b.z
+    result[2] = a[0] * b[1] - a[1] * b[0];  // c.z = a.x * b.y - a.y * b.x
+}
+
+/**
  * @brief Compute weighted covariance matrix for a given keypoint.
  *
  * @details
@@ -491,11 +520,6 @@ __device__ inline void pca(const float* points, const int points_num, const int*
         eigenvectors[threadid * 9 + i*3 + 1] = eigvec[i][1];
         eigenvectors[threadid * 9 + i*3 + 2] = eigvec[i][2];
     }
-}
-
-__device__ inline bool nms(const float *points, const int point_num, const int* neighors, const float nmx_r, const float* lambda3)
-{
-    
 }
 
 class MAT {
