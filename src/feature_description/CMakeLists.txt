@@ -12,6 +12,7 @@ find_package(Eigen3 REQUIRED)
 
 cuda_add_library(${MODULE_NAME} STATIC 
     src/shot.cu
+    src/fpfh.cu
 )
 
 include_directories(
