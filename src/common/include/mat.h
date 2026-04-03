@@ -478,38 +478,12 @@ __device__ inline void pca(const float* points, const int points_num, const int*
     int stride = k + 1;
     int base   = threadid * stride; // Current point index in neighbor_indices
 
-    // Centroid
-    float cx = 0.f, cy = 0.f, cz = 0.f;
-    for (int i = 1; i <= k; i++)
-    {
-        int idx = neighbor_indices[base + i];
+    float M[3][3]       = {0};  // Zero-initialized covariance matrix
+    float eigval[3]     = {0};  // Eigenvalues (will be sorted in is_keypoint)
+    float eigvec[3][3]  = {0};  // Eigenvectors
 
-        cx += points[idx * POINT_DIM + 0];
-        cy += points[idx * POINT_DIM + 1];
-        cz += points[idx * POINT_DIM + 2];
-    }
-    cx /= k; cy /= k; cz /= k;
-
-    // Covariance
-    float C[3][3] = {0};
-    for (int i = 1; i <= k; i++)
-    {
-        int idx = neighbor_indices[base + i];
-
-        float x = points[idx * POINT_DIM + 0] - cx;
-        float y = points[idx * POINT_DIM + 1] - cy;
-        float z = points[idx * POINT_DIM + 2] - cz;
-
-        C[0][0] += x*x; C[0][1] += x*y; C[0][2] += x*z;
-        C[1][0] += y*x; C[1][1] += y*y; C[1][2] += y*z;
-        C[2][0] += z*x; C[2][1] += z*y; C[2][2] += z*z;
-    }
-
-    // Eigen decomposition
-    float eigval[3];
-    float eigvec[3][3];
-
-    jacobi_3x3(C, eigval, eigvec);
+    mat::cov_mat(points, threadid, points_num, neighbor_indices, k, M);     // Compute covariance matrix for local neighborhood
+    mat::jacobi_3x3(M, eigval, eigvec);                                     // Compute eigenvalues and eigenvectors using Jacobi iteration
 
     // Store
     for (int i = 0; i < 3; i++)
