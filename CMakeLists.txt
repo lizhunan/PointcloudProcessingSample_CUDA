@@ -20,6 +20,7 @@ add_subdirectory(src/common)
 add_subdirectory(src/display)
 add_subdirectory(src/feature_detection)
 add_subdirectory(src/feature_description)
+add_subdirectory(src/registration)
 
 cuda_add_executable(Sample 
     src/main.cpp
@@ -30,6 +31,7 @@ target_link_libraries(Sample
     display
     feature_detection
     feature_description
+    registration
     ${Pangolin_LIBRARIES}
     Eigen3::Eigen
 )
