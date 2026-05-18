@@ -13,6 +13,7 @@ find_package(Eigen3 REQUIRED)
 cuda_add_library(${MODULE_NAME} STATIC 
     src/icp.cu
     src/ndt.cu
+    src/display.cpp
 )
 
 include_directories(
