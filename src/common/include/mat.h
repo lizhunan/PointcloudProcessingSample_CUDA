@@ -496,6 +496,22 @@ __device__ inline void pca(const float* points, const int points_num, const int*
     }
 }
 
+__device__ inline void centered(const float* points, const int points_num, const float* center, 
+                                float* centered_points)
+{
+    int threadid = blockDim.x * blockIdx.x + threadIdx.x;
+    if (threadid >= points_num) return;
+
+    float x = points[threadid * POINT_DIM + 0];
+    float y = points[threadid * POINT_DIM + 1];
+    float z = points[threadid * POINT_DIM + 2];
+
+    centered_points[threadid * POINT_DIM + 0] = x - center[0];
+    centered_points[threadid * POINT_DIM + 1] = y - center[1];
+    centered_points[threadid * POINT_DIM + 2] = z - center[2];
+}
+
+
 class MAT {
 
 public:
@@ -547,6 +563,8 @@ public:
      */
     void normals_estimator(const float* h_points, const int points_num, const int* h_neighbors, const int k, float* normals);
 
+    void compute_center(const float* points, const int points_num, float* center);
+
     private:
     std::shared_ptr<display::Display>   display;        // Visualization module
 
@@ -559,6 +577,7 @@ private:
     float*      d_eigenvalues;      // Eigenvalues [N * 3]
     float*      d_eigenvectors;     // Eigenvectors [N * 9]
     float*      d_normals;          // Normals [N * 3]
+    float*      d_center;
 
 };
 

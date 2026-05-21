@@ -44,6 +44,50 @@ __global__ void normals_pca(const float* points, const int points_num, const int
     normals[threadid * 3 + 2] = eigenvectors[threadid * 9 + min_id*3 + 2];
 }
 
+__global__ void center_xyz(const float* points, const int points_num, float* center)
+{
+    __shared__ float shared_center[3];
+    __shared__ float shared_count;
+    
+    if (threadIdx.x == 0 && threadIdx.y == 0)
+    {
+        shared_center[0]    = 0.0f;
+        shared_center[1]    = 0.0f;
+        shared_center[2]    = 0.0f;
+        shared_count        = 0.0f;
+    }
+    __syncthreads();
+    
+    int threadid = blockDim.x * blockIdx.x + threadIdx.x;
+
+    float local_center[3]   = {0.0f, 0.0f, 0.0f};
+    float local_count       = 0.0f;
+
+    if (threadid < points_num)
+    {
+        local_center[0] = points[threadid * POINT_DIM + 0];
+        local_center[1] = points[threadid * POINT_DIM + 1];
+        local_center[2] = points[threadid * POINT_DIM + 2];
+        local_count     = 1.0f;
+    }
+
+    atomicAdd(&shared_center[0], local_center[0]);
+    atomicAdd(&shared_center[1], local_center[1]);
+    atomicAdd(&shared_center[2], local_center[2]);
+    atomicAdd(&shared_count, local_count);
+    __syncthreads();
+
+    if (blockIdx.x == 0 && threadIdx.x == 0 && threadIdx.y == 0)
+    {
+        if (points_num > 0)
+        {
+            center[0] = shared_center[0] / shared_count;
+            center[1] = shared_center[1] / shared_count;
+            center[2] = shared_center[2] / shared_count;
+        }
+    }
+}
+
 MAT::MAT()
 {}
 
@@ -89,6 +133,16 @@ void MAT::normals_estimator(const float* h_points, const int points_num, const i
     CUDA_CHECK(cudaFree(d_eigenvectors));
     CUDA_CHECK(cudaFree(d_eigenvalues));
     CUDA_CHECK(cudaFree(d_points));
+}
+
+void MAT::compute_center(const float* points, const int points_num, float* center)
+{
+    CUDA_CHECK(cudaMalloc((void **)&d_center, sizeof(float)*3));
+    int grid_num    = (points_num+1024-1)/1024;
+    int block_num   = 1024;
+    center_xyz<<<grid_num, block_num>>>(points, points_num, d_center);
+    CUDA_CHECK(cudaMemcpy(center, d_center, sizeof(float)*3, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_center));
 }
 
 MAT::~MAT()
