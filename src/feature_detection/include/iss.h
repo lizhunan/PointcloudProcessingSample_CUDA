@@ -16,7 +16,7 @@ public:
     ~ISS();
 
 public:
-    void detector(const float* points, const int points_num, const int* h_neighbors, const float nms_r, const int k);
+    void detector(const float* points, const int points_num, const int* h_neighbors, const float nms_r, const int k, float* output);
 
 private:
     bool vis;

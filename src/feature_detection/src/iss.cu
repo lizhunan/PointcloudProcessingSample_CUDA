@@ -202,7 +202,7 @@ __global__ void detect_keypoints(float *points, const int points_num, float* lam
     float sum           = eigval[0] + eigval[1] + eigval[2];    // Trace and sum for other keypoint criteria(unused)
     lambda3[threadid]   = eigval[2];                            // Store lambda3 for NMS
 
-    if(is_keypoint(eigval, lambda21, lambda32)) points[threadid*POINT_DIM+5] = 0;   // Apply keypoint criteria based on eigenvalue ratios
+    if(is_keypoint(eigval, lambda21, lambda32)) points[threadid*POINT_DIM+5] = 0;       // Apply keypoint criteria based on eigenvalue ratios
     nms_lambda(points, points_num, threadid, neighbors, k, nms_r, lambda3);             // Apply NMS
 }
 
@@ -212,7 +212,7 @@ ISS::ISS(bool vis)
     if (this->vis) display = std::make_unique<display::Display>("ISS");
 }
 
-void ISS::detector(const float* points, const int points_num, const int* h_neighbors, const float nms_r, const int k)
+void ISS::detector(const float* points, const int points_num, const int* h_neighbors, const float nms_r, const int k, float* output)
 {   
     CUDA_CHECK(cudaMalloc((void **)&d_points,       sizeof(float)*points_num*POINT_DIM));
     CUDA_CHECK(cudaMalloc((void **)&d_neighbors,    sizeof(int)*points_num*(k+1)));
@@ -225,6 +225,7 @@ void ISS::detector(const float* points, const int points_num, const int* h_neigh
     int block_num   = 1024;
     detect_keypoints<<<grid_num, block_num>>>(d_points, points_num, d_lambda3, d_neighbors, k, nms_r, 0.35, 0.75);
     CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaMemcpy(output, d_points, sizeof(float)*points_num*POINT_DIM, cudaMemcpyDeviceToHost));
 
     if (this->vis)
     {
@@ -233,6 +234,11 @@ void ISS::detector(const float* points, const int points_num, const int* h_neigh
         display->set_pointcloud_xyz(h_points, points_num);
         delete[] h_points;
     }
+
+    // Free GPU memory
+    CUDA_CHECK(cudaFree(d_lambda3));
+    CUDA_CHECK(cudaFree(d_neighbors));
+    CUDA_CHECK(cudaFree(d_points));
 }
 
 ISS::~ISS()
