@@ -9,6 +9,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 find_package(CUDA REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(Pangolin REQUIRED)
 
 cuda_add_library(${MODULE_NAME} STATIC 
     src/icp.cu
@@ -18,8 +19,12 @@ cuda_add_library(${MODULE_NAME} STATIC
 
 include_directories(
     include
+    ${Pangolin_INCLUDE_DIRS}
 )
 
 target_link_libraries(${MODULE_NAME}
     Eigen3::Eigen
+    feature_detection
+    feature_description
+    ${Pangolin_LIBRARIES}
 )
