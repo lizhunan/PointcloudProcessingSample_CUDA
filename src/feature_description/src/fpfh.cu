@@ -73,51 +73,50 @@ __global__ void fpfh(const float* points, const int points_num, const int* neigh
                     const int k, const float r, float* fpfh_features)
 {
     int threadid = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (threadid!=20) return;
     if (threadid >= points_num) return;
-
-    // Load keypoint coordinates p_k
-    float point[3] = {points[threadid*POINT_DIM+0], points[threadid*POINT_DIM+1], points[threadid*POINT_DIM+2]};
-
-    // Keypoint SPFH
-    int keypoint_spfh[HIST_DIM] = {0};
-    spfh(points, points_num, threadid, neighbor_indices, normals, k, r, keypoint_spfh);
-
-    // Neighbor indexing
-    // Layout:
-    //   neighbor_indices[p_id * (k+1) + 0]     → self index
-    //   neighbor_indices[p_id * (k+1) + i]     → i-th neighbor
-    int stride = k + 1;
-    int base   = threadid * stride; // Current point index in neighbor_indices
-
-    // Neighbors SPFH
-    volatile float neighbors_spfh[HIST_DIM]      = {0.0f};
-    float total_weight                  = 0.0f;
-    float test = 0.0f;
-    for (int i = 1; i <= k; i++)
+    if (points[threadid*POINT_DIM+5]==0)     // ONLY keypoints
     {
-        int idx                 = neighbor_indices[base + i];
-        float neighbor_point[3] = {points[idx*POINT_DIM+0], points[idx*POINT_DIM+1], points[idx*POINT_DIM+2]};
-        float dist              = mat::distf(point, neighbor_point);
+        // Load keypoint coordinates p_k
+        float point[3] = {points[threadid*POINT_DIM+0], points[threadid*POINT_DIM+1], points[threadid*POINT_DIM+2]};
 
-        if (dist > r) continue;
+        // Keypoint SPFH
+        int keypoint_spfh[HIST_DIM] = {0};
+        spfh(points, points_num, threadid, neighbor_indices, normals, k, r, keypoint_spfh);
 
-        int neighbor_hist[HIST_DIM] = {0};
-        spfh(points, points_num, idx, neighbor_indices, normals, k, r, neighbor_hist);
+        // Neighbor indexing
+        // Layout:
+        //   neighbor_indices[p_id * (k+1) + 0]     → self index
+        //   neighbor_indices[p_id * (k+1) + i]     → i-th neighbor
+        int stride = k + 1;
+        int base   = threadid * stride; // Current point index in neighbor_indices
 
-        float weight    = 1/dist;
-        for (size_t j = 0; j < HIST_DIM; j++)
+        // Neighbors SPFH
+        volatile float neighbors_spfh[HIST_DIM]      = {0.0f};
+        float total_weight                  = 0.0f;
+        float test = 0.0f;
+        for (int i = 1; i <= k; i++)
         {
-            neighbors_spfh[j] += weight*(float)neighbor_hist[j];
-        }
-        total_weight    += weight;
-    }
+            int idx                 = neighbor_indices[base + i];
+            float neighbor_point[3] = {points[idx*POINT_DIM+0], points[idx*POINT_DIM+1], points[idx*POINT_DIM+2]};
+            float dist              = mat::distf(point, neighbor_point);
 
-    volatile float fpfh[HIST_DIM] = {0.0f}; 
-    float t = 0.0f;
-    for (int j = 0; j < HIST_DIM; j++)
-    {
-        fpfh_features[threadid * HIST_DIM + j] = (float)keypoint_spfh[j] + (neighbors_spfh[j] / k);
+            if (dist > r) continue;
+
+            int neighbor_hist[HIST_DIM] = {0};
+            spfh(points, points_num, idx, neighbor_indices, normals, k, r, neighbor_hist);
+
+            float weight    = 1/dist;
+            for (size_t j = 0; j < HIST_DIM; j++)
+            {
+                neighbors_spfh[j] += weight*(float)neighbor_hist[j];
+            }
+            total_weight    += weight;
+        }
+
+        for (int j = 0; j < HIST_DIM; j++)
+        {
+            fpfh_features[threadid * HIST_DIM + j] = (float)keypoint_spfh[j] + (neighbors_spfh[j] / k);
+        }
     }
 }
 
