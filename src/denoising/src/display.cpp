@@ -42,16 +42,14 @@ void Display::show()
         glColor3f(1,1,1);
         for (int i=0; i<points_num; i++)
         {
-			if (points[i*POINT_DIM+5] == 0)
+			if (points[i*POINT_DIM+5] == -2)
 			{
-                // for (int j = 0; j < 33; j++)
-                // {
-                //     printf("target feat[%d] = %.6f\n", j, tar_feat[i * 33 + j]);
-                // }
-                // printf("\n");
-				glColor3f(0,1,0);
+				glColor3f(1,0,0);
 			}
-			else glColor3f(1,1,1);
+			else 
+            {
+                glColor3f(1,1,1);
+            }
             glVertex3f(points[i*POINT_DIM+0], points[i*POINT_DIM+1], points[i*POINT_DIM+2]);
         }
         glEnd();
