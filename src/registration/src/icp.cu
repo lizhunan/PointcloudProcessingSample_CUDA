@@ -1,6 +1,6 @@
 #include "icp.h"
 
-namespace reg{
+namespace reg {
 
 __constant__ float d_transform_init[16];
 
