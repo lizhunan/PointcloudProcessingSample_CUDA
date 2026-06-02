@@ -496,19 +496,16 @@ __device__ inline void pca(const float* points, const int points_num, const int*
     }
 }
 
-__device__ inline void centered(const float* points, const int points_num, const float* center, 
+__device__ inline void centered(const float* points, const int points_num, const int p_id, const float* center, 
                                 float* centered_points)
 {
-    int threadid = blockDim.x * blockIdx.x + threadIdx.x;
-    if (threadid >= points_num) return;
+    float x = points[p_id * POINT_DIM + 0];
+    float y = points[p_id * POINT_DIM + 1];
+    float z = points[p_id * POINT_DIM + 2];
 
-    float x = points[threadid * POINT_DIM + 0];
-    float y = points[threadid * POINT_DIM + 1];
-    float z = points[threadid * POINT_DIM + 2];
-
-    centered_points[threadid * POINT_DIM + 0] = x - center[0];
-    centered_points[threadid * POINT_DIM + 1] = y - center[1];
-    centered_points[threadid * POINT_DIM + 2] = z - center[2];
+    centered_points[p_id * POINT_DIM + 0] = x - center[0];
+    centered_points[p_id * POINT_DIM + 1] = y - center[1];
+    centered_points[p_id * POINT_DIM + 2] = z - center[2];
 }
 
 
