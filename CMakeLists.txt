@@ -18,17 +18,25 @@ include_directories(
 
 add_subdirectory(src/common)
 add_subdirectory(src/display)
+add_subdirectory(src/denoising)
+add_subdirectory(src/downsampling)
+add_subdirectory(src/cluster)
 add_subdirectory(src/feature_detection)
 add_subdirectory(src/feature_description)
 add_subdirectory(src/registration)
 
 cuda_add_executable(Sample 
     src/main.cpp
-    src/unit_test.cu)
+    src/unit_test.cu
+    # src/reg_case.cu
+)
     
 target_link_libraries(Sample
     common
     display
+    denoising
+    downsampling
+    cluster
     feature_detection
     feature_description
     registration
