@@ -36,7 +36,6 @@ __global__ void normal_space(const float* normals, const int normal_num, const i
     normal_space[idx*2 + 0] = theta;
     normal_space[idx*2 + 1] = phi;
     bucket_ids[idx]         = bucket_idx;
-    printf("bucket_idx: %d\n", bucket_idx);
 }
 
 __global__ void compute_bucket_id(const float* normal_space, const int normal_num, 
@@ -63,7 +62,6 @@ __global__ void count_bucket(const int* bucket_ids, const int normal_num, int* b
     if (idx >= normal_num) return;
     
     int bid = bucket_ids[idx];
-    if (bid>1000) printf("count_bucket bid=%d\n", bid);
     atomicAdd(&bucket_counts[bid], 1);
 }
 
@@ -75,9 +73,7 @@ __global__ void fill_sorted_indices(const int* bucket_ids, const int* bucket_off
     if (idx >= normals_num) return;
     
     int bid = bucket_ids[idx];
-    if (bid>1000) printf("bid=%d\n", bid);
     int pos = atomicAdd(&bucket_pos_counter[bid], 1);
-    if ((bucket_offsets[bid] + pos)>normals_num) printf("bucket_offsets[bid]: idx=%d, bid=%d, bucket_offsets=%d, pos=%d\n", idx, bid, bucket_offsets[bid], pos);
     
     sorted_indices[bucket_offsets[bid] + pos] = idx;
 }
@@ -91,14 +87,13 @@ __global__ void sampling(const float* points, const int* bucket_offsets,
     int bid = blockIdx.x * blockDim.x + threadIdx.x;
     if (bid >= total_buckets) return;
     
-    int bucket_size = bucket_counts[bid];
-    int samples_needed = samples_per_bucket[bid];
+    int bucket_size     = bucket_counts[bid];
+    int samples_needed  = samples_per_bucket[bid];
     
     if (bucket_size == 0 || samples_needed == 0) return;
     
     curandState state;
     curand_init(seed + bid, 0, 0, &state);
-    
 
     if (samples_needed >= bucket_size) {
         for (int i = 0; i < bucket_size; i++) {
@@ -108,16 +103,13 @@ __global__ void sampling(const float* points, const int* bucket_offsets,
             points_out[out_pos * POINT_DIM + 0] = points[src_idx * POINT_DIM + 0];
             points_out[out_pos * POINT_DIM + 1] = points[src_idx * POINT_DIM + 1];
             points_out[out_pos * POINT_DIM + 2] = points[src_idx * POINT_DIM + 2];
-            #if POINT_DIM > 3
             points_out[out_pos * POINT_DIM + 3] = points[src_idx * POINT_DIM + 3];
             points_out[out_pos * POINT_DIM + 4] = points[src_idx * POINT_DIM + 4];
             points_out[out_pos * POINT_DIM + 5] = points[src_idx * POINT_DIM + 5];
-            #endif
         }
         return;
     }
     
-    // 随机采样
     bool* selected = new bool[bucket_size];
     for (int i = 0; i < bucket_size; i++) selected[i] = false;
     
@@ -134,11 +126,9 @@ __global__ void sampling(const float* points, const int* bucket_offsets,
             points_out[out_pos * POINT_DIM + 0] = points[src_idx * POINT_DIM + 0];
             points_out[out_pos * POINT_DIM + 1] = points[src_idx * POINT_DIM + 1];
             points_out[out_pos * POINT_DIM + 2] = points[src_idx * POINT_DIM + 2];
-            #if POINT_DIM > 3
             points_out[out_pos * POINT_DIM + 3] = points[src_idx * POINT_DIM + 3];
             points_out[out_pos * POINT_DIM + 4] = points[src_idx * POINT_DIM + 4];
             points_out[out_pos * POINT_DIM + 5] = points[src_idx * POINT_DIM + 5];
-            #endif
         }
     }
     
@@ -211,11 +201,6 @@ void NSS::downsampling(float* h_points_out)
 
     for (int i = 0; i < total_buckets; i++)
     {
-        // printf("bucket num[%d]: %d\n", i, h_bucket_counts[i]);
-    }
-
-    for (int i = 0; i < total_buckets; i++)
-    {
         if (h_bucket_counts[i] > 0) total_nonempty++;
     }
     LOGV("Non-empty buckets = %d / %d.", total_nonempty, total_buckets);
@@ -242,11 +227,6 @@ void NSS::downsampling(float* h_points_out)
         }
     }
 
-    for (int i = 0; i < total_buckets; i++)
-    {
-        // printf("sampling bucket num[%d]: %d\n", i, h_samples_per_bucket[i]);
-    }
-
     // Recompute actual sampling number
     int actual_samples = 0;
     for (int i = 0; i < total_buckets; i++)
@@ -263,7 +243,6 @@ void NSS::downsampling(float* h_points_out)
     for (int i = 0; i < total_buckets; i++)
     {
         h_bucket_offsets[i + 1] = h_bucket_offsets[i] + h_bucket_counts[i];
-        // printf("h_bucket_offsets[%d]: %d=%d+%d\n", i, h_bucket_offsets[i + 1], h_bucket_offsets[i], h_bucket_counts[i]);
     }
     CUDA_CHECK(cudaMemcpy(d_bucket_offsets, h_bucket_offsets, sizeof(int) * (total_buckets + 1), cudaMemcpyHostToDevice));
 
@@ -290,10 +269,10 @@ void NSS::downsampling(float* h_points_out)
     CUDA_CHECK(cudaMemcpy(&final_count, d_out_counter, sizeof(int), cudaMemcpyDeviceToHost));
     LOGV("Sampling completed, final count = %d", final_count);
 
-    CUDA_CHECK(cudaMemcpy(h_points_out, d_points_out, sizeof(float)*this->points_num*POINT_DIM, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_points_out, d_points_out, sizeof(float)*final_count*POINT_DIM, cudaMemcpyDeviceToHost));
     if (this->vis)
     {
-        display->set_points(h_points_out, this->points_num);
+        display->set_points(h_points_out, final_count);
     }
 
     delete[] h_bucket_counts;
